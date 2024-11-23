@@ -110,3 +110,27 @@
     font-size: 0.9rem;
   }
 }
+
+.product-list {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.product-list__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.product-list__loading {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #555;
+}
+
+.product-list__observer {
+  height: 1px;
+  visibility: hidden;
+}

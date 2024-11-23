@@ -1,56 +1,76 @@
 import React, { useEffect, useRef, useState } from "react";
 
-import { Loader } from "./Loader";
 import ProductCard from "./ProductCard";
-import api from "../utils/api";
-
-// import axios from "../utils/api";
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const loaderRef = useRef(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get("/products"); // Adjust endpoint if needed
-        console.log("Products fetched:", response.data);
+  const observerRef = useRef(null);
 
-        setProducts((prev) => [...prev, ...response.data]);
-        // setHasMore(data.hasMore);
-      } catch (error) {
-        console.error("Failed to load products:", error);
-      } finally {
-        setLoading(false);
+  // Fetch products from the API
+  const fetchProducts = async (page) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://fakestoreapi.com/products?limit=10&page=${page}`
+      );
+      const data = await response.json();
+
+      if (data.length === 0) {
+        setHasMore(false);
+      } else {
+        setProducts((prev) => [...prev, ...data]);
       }
-    };
-    fetchProducts();
-  }, [page]);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Observe the "load more" trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prev) => prev + 1);
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prevPage) => prevPage + 1);
         }
       },
       { threshold: 1.0 }
     );
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => observer.disconnect();
-  }, [hasMore]);
+    if (observerRef.current) observer.observe(observerRef.current);
+
+    return () => {
+      if (observerRef.current) observer.unobserve(observerRef.current);
+    };
+  }, [hasMore, loading]);
+
+  // Fetch products whenever the page changes
+  useEffect(() => {
+    fetchProducts(page);
+  }, [page]);
 
   return (
     <div className="product-list">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
-      ))}
-      {loading && <Loader />}
-      {/* <div ref={loaderRef}></div> */}
+      {/* Product Grid */}
+      <div className="product-list__grid">
+        {products.map((product, index) => (
+          <ProductCard
+            key={`${product.id}-${index}-${page}`}
+            product={product}
+            onViewDetails={(p) => console.log("Viewing product:", p)}
+          />
+        ))}
+      </div>
+
+      {/* Loading Indicator */}
+      {loading && <div className="product-list__loading">Loading...</div>}
+
+      {/* Load More Trigger */}
+      <div ref={observerRef} className="product-list__observer"></div>
     </div>
   );
 };

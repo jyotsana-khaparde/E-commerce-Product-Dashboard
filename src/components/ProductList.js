@@ -5,53 +5,74 @@ import ProductCard from "./ProductCard";
 import ProductModal from "./ProductModal";
 
 const ProductList = () => {
-  const [products, setProducts] = useState([]); // All loaded products
-  const [filteredProducts, setFilteredProducts] = useState([]); // Displayed products after filtering/sorting
-  const [page, setPage] = useState(1); // Current page for infinite scroll
-  const [loading, setLoading] = useState(false); // Loading state
-  const [hasMore, setHasMore] = useState(true); // Flag for more products
-  const [error, setError] = useState(null); // Error message state
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const [filters, setFilters] = useState({
     category: "",
     minPrice: "",
     maxPrice: "",
-  }); // Filter state
-  const [sort, setSort] = useState("price-asc"); // Sorting state
+  });
+  const [sort, setSort] = useState("price-asc");
 
-  const [selectedProductId, setSelectedProductId] = useState(null); // Product ID for modal
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal visibility
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const observerRef = useRef(null); // Ref for infinite scroll trigger
+  const observerRef = useRef(null);
+  const [error, setError] = useState(null); // Error state
 
-  // Fetch products from the API
   const fetchProducts = async (page) => {
     setLoading(true);
-    setError(null); // Reset error before making a request
+    setError(null); // Reset error before fetching
     try {
       const response = await fetch(
         `https://fakestoreapi.com/products?limit=10&page=${page}`
       );
+
       if (!response.ok) {
-        throw new Error(`Failed to load products (Status: ${response.status})`);
+        throw new Error("Failed to fetch products.");
       }
+
       const data = await response.json();
 
       if (data.length === 0) {
-        setHasMore(false); // No more products to load
+        setHasMore(false);
       } else {
-        setProducts((prev) => [...prev, ...data]); // Add new products to the list
+        setProducts((prev) => [...prev, ...data]);
       }
-    } catch (error) {
-      setError("Unable to load products. Please try again later.");
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Apply filters and sorting
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prevPage) => prevPage + 1);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (observerRef.current) observer.observe(observerRef.current);
+
+    return () => {
+      if (observerRef.current) observer.unobserve(observerRef.current);
+    };
+  }, [hasMore, loading]);
+
+  useEffect(() => {
+    fetchProducts(page);
+  }, [page]);
+
   const applyFiltersAndSort = () => {
-    let updatedProducts = [...products]; // Work on the entire product list
+    let updatedProducts = [...products];
 
     // Apply filters
     let filtered = [];
@@ -82,32 +103,9 @@ const ProductList = () => {
       updatedProducts.sort((a, b) => b.rating.rate - a.rating.rate);
     }
 
-    setFilteredProducts(updatedProducts); // Update the displayed product list
+    setFilteredProducts(updatedProducts);
   };
 
-  // Infinite Scroll Logic
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          setPage((prevPage) => prevPage + 1); // Load the next page
-        }
-      },
-      { threshold: 1.0 }
-    );
-    if (observerRef.current) observer.observe(observerRef.current);
-
-    return () => {
-      if (observerRef.current) observer.unobserve(observerRef.current);
-    };
-  }, [hasMore, loading]);
-
-  // Fetch products whenever the page changes
-  useEffect(() => {
-    fetchProducts(page);
-  }, [page]);
-
-  // Reapply filters and sorting whenever products, filters, or sort change
   useEffect(() => {
     applyFiltersAndSort();
   }, [products, filters, sort]);
@@ -132,7 +130,6 @@ const ProductList = () => {
 
   return (
     <div className="product-list">
-      {/* Filter and Sort Bar */}
       <FilterSortBar
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -140,26 +137,33 @@ const ProductList = () => {
       />
 
       {/* Error Message */}
-      {error && <div className="product-list__error">{error}</div>}
+      {error && <div className="error-message">{error}</div>}
+
+      {/* Loading Spinner */}
+      {loading && page === 1 && (
+        <div className="product-list__loading">Loading products...</div>
+      )}
 
       {/* Product Grid */}
       <div className="product-list__grid">
         {filteredProducts.map((product, index) => (
           <ProductCard
-            key={`${product.id}-${page}-${index}`} // Ensure unique keys for stable rendering
+            key={`${product.id}-${page}-${index}`}
             product={product}
-            onProductClick={handleProductClick}
+            onProductClick={() => handleProductClick(product.id)}
           />
         ))}
       </div>
 
-      {/* Loading Indicator */}
-      {loading && <div className="product-list__loading">Loading...</div>}
+      {/* Infinite Scroll Loader */}
+      {loading && page > 1 && (
+        <div className="product-list__loading">Loading more products...</div>
+      )}
 
       {/* Load More Trigger */}
       <div ref={observerRef} className="product-list__observer"></div>
 
-      {/* Product Modal */}
+      {/* Modal */}
       {isModalOpen && (
         <ProductModal
           productId={selectedProductId}

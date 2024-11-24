@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 import FilterSortBar from "./FilterSortBar";
 import ProductCard from "./ProductCard";
+import ProductModal from "./ProductModal";
 
 const ProductList = () => {
   const [products, setProducts] = useState([]); // All loaded products
@@ -16,6 +17,9 @@ const ProductList = () => {
     maxPrice: "",
   }); // Filter state
   const [sort, setSort] = useState("price-asc"); // Sorting state
+
+  const [selectedProductId, setSelectedProductId] = useState(null); // Product ID for modal
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal visibility
 
   const observerRef = useRef(null); // Ref for infinite scroll trigger
 
@@ -113,6 +117,18 @@ const ProductList = () => {
     setSort(value);
   };
 
+  // Handle product click to open modal
+  const handleProductClick = (productId) => {
+    setSelectedProductId(productId);
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setSelectedProductId(null);
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="product-list">
       {/* Filter and Sort Bar */}
@@ -128,6 +144,7 @@ const ProductList = () => {
           <ProductCard
             key={`${product.id}-${page}-${index}`} // Ensure unique keys for stable rendering
             product={product}
+            onProductClick={() => handleProductClick(product.id)} // Open modal on click
           />
         ))}
       </div>
@@ -137,6 +154,15 @@ const ProductList = () => {
 
       {/* Load More Trigger */}
       <div ref={observerRef} className="product-list__observer"></div>
+
+      {/* Product Modal */}
+      {isModalOpen && (
+        <ProductModal
+          productId={selectedProductId}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

@@ -1,10 +1,10 @@
 import React from "react";
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onProductClick }) => {
   const { name, price, category, rating, image } = product;
 
   return (
-    <div className="product-card">
+    <div className="product-card" onClick={() => onProductClick(product.id)}>
       {/* Product Image */}
       <div className="product-card__image">
         <img src={image} alt={name} loading="lazy" />

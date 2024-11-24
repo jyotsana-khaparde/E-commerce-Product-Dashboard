@@ -10,6 +10,7 @@ const ProductList = () => {
   const [page, setPage] = useState(1); // Current page for infinite scroll
   const [loading, setLoading] = useState(false); // Loading state
   const [hasMore, setHasMore] = useState(true); // Flag for more products
+  const [error, setError] = useState(null); // Error message state
 
   const [filters, setFilters] = useState({
     category: "",
@@ -26,10 +27,14 @@ const ProductList = () => {
   // Fetch products from the API
   const fetchProducts = async (page) => {
     setLoading(true);
+    setError(null); // Reset error before making a request
     try {
       const response = await fetch(
         `https://fakestoreapi.com/products?limit=10&page=${page}`
       );
+      if (!response.ok) {
+        throw new Error(`Failed to load products (Status: ${response.status})`);
+      }
       const data = await response.json();
 
       if (data.length === 0) {
@@ -38,7 +43,7 @@ const ProductList = () => {
         setProducts((prev) => [...prev, ...data]); // Add new products to the list
       }
     } catch (error) {
-      console.error("Failed to fetch products:", error);
+      setError("Unable to load products. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -80,7 +85,7 @@ const ProductList = () => {
     setFilteredProducts(updatedProducts); // Update the displayed product list
   };
 
-  // Observe the "load more" trigger for infinite scrolling
+  // Infinite Scroll Logic
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -107,23 +112,19 @@ const ProductList = () => {
     applyFiltersAndSort();
   }, [products, filters, sort]);
 
-  // Handle filter change
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Handle sort change
   const handleSortChange = (value) => {
     setSort(value);
   };
 
-  // Handle product click to open modal
   const handleProductClick = (productId) => {
     setSelectedProductId(productId);
     setIsModalOpen(true);
   };
 
-  // Close modal
   const handleCloseModal = () => {
     setSelectedProductId(null);
     setIsModalOpen(false);
@@ -138,13 +139,16 @@ const ProductList = () => {
         onSortChange={handleSortChange}
       />
 
+      {/* Error Message */}
+      {error && <div className="product-list__error">{error}</div>}
+
       {/* Product Grid */}
       <div className="product-list__grid">
         {filteredProducts.map((product, index) => (
           <ProductCard
             key={`${product.id}-${page}-${index}`} // Ensure unique keys for stable rendering
             product={product}
-            onProductClick={() => handleProductClick(product.id)} // Open modal on click
+            onProductClick={handleProductClick}
           />
         ))}
       </div>
